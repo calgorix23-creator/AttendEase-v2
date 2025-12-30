@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AttendanceClass, AttendanceRecord, PaymentRecord, User, UserRole } from '../types.ts';
-import { LayoutDashboard, Users, Calendar, Plus, X, Edit2, ShieldCheck, ClipboardList, CheckCircle2, UserPlus, Trash2, TrendingUp, Package, AlertCircle, AlertTriangle, ChevronRight, History } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Plus, X, Edit2, ShieldCheck, ClipboardList, UserPlus, Trash2, TrendingUp, Package, AlertCircle, AlertTriangle, ChevronRight, History } from 'lucide-react';
 import { ResponsiveContainer, BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 interface AdminViewProps {
