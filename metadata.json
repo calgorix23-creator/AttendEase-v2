@@ -1,0 +1,5 @@
+{
+  "name": "AttendEase v2 - Booking System",
+  "description": "A booking-based attendance management system where trainees register for classes. Includes a 30-minute cancellation policy and credit management.",
+  "requestFramePermissions": []
+}
