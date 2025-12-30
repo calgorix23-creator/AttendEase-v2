@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
-import { User, UserRole, AuthState, AttendanceClass, AttendanceRecord, PaymentRecord } from './types';
-import { MOCK_USERS, APP_STORAGE_KEY, CREDIT_PACKAGES as INITIAL_PACKAGES } from './constants';
-import Auth from './components/Auth';
-import AdminView from './components/AdminView';
-import TrainerView from './components/TrainerView';
-import TraineeView from './components/TraineeView';
+import { User, UserRole, AuthState, AttendanceClass, AttendanceRecord, PaymentRecord } from './types.ts';
+import { MOCK_USERS, APP_STORAGE_KEY, CREDIT_PACKAGES as INITIAL_PACKAGES } from './constants.ts';
+import Auth from './components/Auth.tsx';
+import AdminView from './components/AdminView.tsx';
+import TrainerView from './components/TrainerView.tsx';
+import TraineeView from './components/TraineeView.tsx';
 import { LogOut, User as UserIcon } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -121,16 +120,13 @@ const App: React.FC = () => {
     const trainee = users.find(u => u.id === traineeId);
     
     if (existingIndex !== -1) {
-      // Unmarking: Remove record and refund credit
       setAttendance(prev => prev.filter((_, i) => i !== existingIndex));
       if (trainee) {
         updateUser({ ...trainee, credits: (trainee.credits || 0) + 1 });
       }
       return { success: true, message: "Attendance removed. Credit refunded." };
     } else {
-      // Marking: Check credits and add record
       if (!trainee || trainee.role !== UserRole.TRAINEE) return { success: false, message: "Invalid user." };
-      
       const credits = trainee.credits ?? 0;
       if (credits < 1) return { success: false, message: "Trainee has no credits remaining." };
       

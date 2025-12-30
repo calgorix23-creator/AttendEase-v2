@@ -11,7 +11,6 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* Smooth transition for tab switching */
     .animate-in {
       animation: fadeIn 0.3s ease-out;
     }
@@ -28,15 +27,14 @@
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/": "https://esm.sh/react-dom@19.0.0/",
     "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
-    "recharts": "https://esm.sh/recharts@2.13.3?external=react,react-dom",
-    "qrcode.react": "https://esm.sh/qrcode.react@4.1.0?external=react",
-    "html5-qrcode": "https://esm.sh/html5-qrcode@2.3.8"
+    "recharts": "https://esm.sh/recharts@2.13.3?external=react,react-dom"
   }
 }
 </script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-900">
   <div id="root"></div>
-  <script type="module" src="index.tsx"></script>
+  <script type="text/babel" data-presets="react,typescript" data-type="module" src="index.tsx"></script>
 </body>
 </html>
