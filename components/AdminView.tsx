@@ -292,7 +292,7 @@ const AdminView: React.FC<AdminViewProps> = ({ user, classes, attendance, paymen
             {passwordChanged && (
               <div className="flex gap-2 mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] text-indigo-700 font-medium">
                 <ShieldCheck size={14} className="shrink-0" />
-                <span>Password change detected. It will be required at next login.</span>
+                <span>Password update detected. Will be required at next login.</span>
               </div>
             )}
           </div>
@@ -300,6 +300,7 @@ const AdminView: React.FC<AdminViewProps> = ({ user, classes, attendance, paymen
         </form>
       )}
 
+      {/* MODALS */}
       {showClassModal && (
         <div className="fixed inset-0 bg-slate-900/60 z-[300] flex items-end sm:items-center justify-center p-4 backdrop-blur-sm">
           <form onSubmit={handleClassSubmit} className="bg-white w-full max-w-sm rounded-[32px] p-8 space-y-6 animate-in shadow-2xl">
