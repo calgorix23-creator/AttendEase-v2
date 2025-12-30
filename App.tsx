@@ -161,7 +161,7 @@ const App: React.FC = () => {
     if (diffInMinutes < 30) {
       const msg = diffInMinutes <= 0 
         ? "Cancellation Failed: This session has already started or finished." 
-        : `Cancellation Failed: This class starts in ${Math.floor(diffInMinutes)} minutes. Our policy requires at least 30 minutes notice for a credit refund.`;
+        : `Cancellation Failed: This class starts in ${Math.floor(diffInMinutes)} minutes. 30m notice required.`;
       return { success: false, message: msg };
     }
 
@@ -177,22 +177,22 @@ const App: React.FC = () => {
       updateUser({ ...trainee, credits: currentCredits + 1 });
     }
 
-    return { success: true, message: "Success: Booking cancelled and 1 credit has been refunded to your wallet." };
+    return { success: true, message: "Success: Booking cancelled and credit refunded." };
   };
 
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto bg-white shadow-xl relative overflow-hidden">
       {auth.isAuthenticated && auth.user ? (
         <>
-          <header className="px-4 py-6 bg-indigo-600 text-white flex justify-between items-center shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center transition-transform hover:rotate-12"><UserIcon size={20} /></div>
+          <header className="px-5 py-6 bg-indigo-600 text-white flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center transition-transform hover:rotate-6"><UserIcon size={20} /></div>
               <div>
-                <h1 className="font-black text-lg leading-none tracking-tight">AttendEase</h1>
-                <p className="text-[10px] text-indigo-100 uppercase font-black tracking-widest">{auth.user.role}</p>
+                <h1 className="font-semibold text-lg leading-none tracking-tight">AttendEase</h1>
+                <p className="text-[10px] text-indigo-100 uppercase font-medium tracking-wider mt-1">{auth.user.role}</p>
               </div>
             </div>
-            <button onClick={handleLogout} className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-90"><LogOut size={20} /></button>
+            <button onClick={handleLogout} className="p-2.5 hover:bg-white/10 rounded-full transition-all active:scale-90"><LogOut size={20} /></button>
           </header>
 
           <main className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar bg-slate-50">
