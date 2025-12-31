@@ -1,3 +1,4 @@
+
 # AttendEase v2 - Booking & Attendance System
 
 AttendEase is a mobile-first web application for managing class bookings and attendance. This document serves as the single source of truth for functional requirements, business logic, and UI validation rules.
@@ -22,46 +23,33 @@ AttendEase is a mobile-first web application for managing class bookings and att
 ## 2. User Roles & Functionality
 
 ### 👤 Admin (Superuser)
-- **Dashboard**: High-level stats on Revenue (total purchases), Trainee count, Session count, and Attendance volume. Includes a trend chart.
-- **User Management**:
-    - Add/Edit any user.
-    - **New User Validation**: Name, Email, and **Phone Number** are mandatory.
-    - **Password Security**: New users receive a randomly generated 8-character password visible during creation for sharing.
-- **Class Management**: Global control over all classes (Add, Edit, Delete).
-- **Manual Roster**: Access any class roster to manually toggle attendance for trainees.
-- **Global Activity Log**: View a scrollable list of all check-ins.
-    - **Differentiation**: Must clearly label entries as "Marked by Staff" (Manual) or "Self Booked" (App).
-    - **Details**: Log must show Trainee Name, Class Name, Location, Date, Time, and Method.
-- **Package Management**: Create/Edit the credit packages available in the shop.
+- **Dashboard**: High-level stats on Revenue, Trainee count, Session count, and Attendance volume.
+- **User Management**: Add/Edit users with mandatory Name, Email, and Phone Number.
+- **Class Management**: Global control over all sessions.
+- **Manual Roster**: Toggle attendance for trainees in any session.
+- **Global Activity Log**:
+    - **Differentiation**: Entries clearly labeled "Marked by Staff" or "Self Booked".
+    - **Full Context**: Shows Trainee, Class Name, Location, Date, Time, and Method.
+- **Package Management**: Define credit bundles for the shop.
 
 ### 🏋️ Trainer
-- **Schedule Management**: Create, edit, or delete their own sessions. View sessions created by others.
-- **Attendance Taking**:
-    - Access rosters for any session.
-    - Toggle attendance for trainees.
-    - **Inline Error Handling**: If a trainee has 0 credits, an error message must appear inside the roster view (not an alert).
-- **Settings**: Manage own profile (Name, Email, Password).
+- **Schedule Management**: Create and manage sessions.
+- **Attendance Taking**: Access rosters and toggle attendance with inline credit validation.
+- **Settings**: Manage personal profile.
 
 ### 🎓 Trainee
-- **Wallet & Shop**:
-    - View live credit balance.
-    - Purchase credit packages (simulated payment processing with success states).
-- **Booking**:
-    - Book upcoming sessions (costs 1 credit).
-    - Cancel bookings (refunds 1 credit) if outside the 30-minute lock window.
-    - **Inline Errors**: Display credit or lock warnings directly on the class card.
-- **Personal Log**:
-    - Comprehensive history of attended sessions.
-    - Details: Class Name, Scheduled Date/Time, Location, and Check-in Method.
+- **Wallet & Shop**: Live credit balance and package purchasing.
+- **Booking**: Register for or cancel upcoming sessions (1 credit cost/refund).
+- **Personal Log**: Full history of sessions attended with context (Location, Time, Method).
 
 ---
 
 ## 3. Technical Implementation Details
 
-- **Persistence**: All data is stored in `localStorage` using the `attendease_full_v1` key prefix.
-- **Security**: Basic password-based auth. Forgot password flow requires verification of both Email and Phone Number.
+- **Persistence**: Data is persisted on the Node.js server in a `db.json` file. This allows real-time state sharing between Trainers and Trainees across different devices.
+- **API**: The frontend communicates with the backend via `GET /api/data` and `POST /api/data`.
+- **Security**: Basic password-based auth. Forgot password flow requires verification of Email and Phone Number.
 - **UI/UX**: 
-    - Mobile-first, max-width container (`448px`).
-    - Smooth "animate-in" transitions for tab switching and modals.
-    - Tailwind CSS for responsive styling.
-    - Lucide-React for consistent iconography.
+    - Mobile-first design (max-width `448px`).
+    - Tailwind CSS and Lucide-React icons.
+    - Smooth "animate-in" transitions.

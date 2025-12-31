@@ -22,6 +22,7 @@ export interface AttendanceClass {
   date: string;
   time: string;
   location: string;
+  maxCapacity: number;
   createdAt: number;
 }
 
@@ -31,7 +32,7 @@ export interface AttendanceRecord {
   traineeId: string;
   timestamp: number;
   method: 'APP' | 'MANUAL';
-  status: 'BOOKED' | 'ATTENDED';
+  status: 'BOOKED' | 'ATTENDED' | 'WAITLISTED';
 }
 
 export interface PaymentRecord {
