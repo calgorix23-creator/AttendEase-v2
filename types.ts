@@ -11,8 +11,8 @@ export interface User {
   name: string;
   role: UserRole;
   password?: string;
-  credits?: number;
   phoneNumber?: string;
+  credits?: number;
 }
 
 export interface AttendanceClass {
@@ -22,7 +22,6 @@ export interface AttendanceClass {
   date: string;
   time: string;
   location: string;
-  qrSecret: string;
   createdAt: number;
 }
 

@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
-import { UserCircle2, Mail, Lock, Phone, ArrowLeft, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { UserCircle2, Mail, Lock, Phone, ArrowLeft, ShieldCheck, AlertCircle } from 'lucide-react';
 
 interface AuthProps {
-  onLogin: (email: string, password?: string) => void;
+  onLogin: (email: string, password?: string) => boolean;
   onResetPassword: (email: string, phone: string, newPassword: string) => boolean;
 }
 
@@ -11,6 +11,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
   
   // Recovery states
   const [recoveryEmail, setRecoveryEmail] = useState('');
@@ -19,13 +20,28 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
 
+  useEffect(() => {
+    setError(null);
+  }, [mode, email, password, recoveryEmail, recoveryPhone, newPassword, confirmPassword]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (mode === 'login') {
-      if (email) onLogin(email, password);
+      if (email) {
+        const success = onLogin(email, password);
+        if (!success) {
+          setError("Invalid email or password. Please try again.");
+        }
+      }
     } else {
       if (newPassword !== confirmPassword) {
-        alert("Passwords do not match.");
+        setError("Passwords do not match.");
+        return;
+      }
+      if (newPassword.length < 8) {
+        setError("Password must be at least 8 characters long.");
         return;
       }
       const success = onResetPassword(recoveryEmail, recoveryPhone, newPassword);
@@ -40,7 +56,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
           setConfirmPassword('');
         }, 2000);
       } else {
-        alert("Verification failed. Please check your email and phone number.");
+        setError("Verification failed. Please check your registered email and phone number.");
       }
     }
   };
@@ -57,6 +73,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
             {mode === 'login' ? 'Welcome back! Please sign in.' : 'Recover your access'}
           </p>
         </div>
+
+        {error && (
+          <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex items-start gap-3 animate-in">
+            <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+            <p className="text-rose-700 text-xs font-medium leading-relaxed">{error}</p>
+          </div>
+        )}
 
         {resetSuccess ? (
           <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl text-center space-y-3 animate-in">
@@ -79,7 +102,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
                     <input
                       type="email"
                       required
-                      className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all"
+                      className={`block w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all ${error ? 'border-rose-200' : 'border-slate-100'}`}
                       placeholder="email@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -105,7 +128,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
                     <input
                       type="password"
                       required
-                      className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all"
+                      className={`block w-full pl-10 pr-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm transition-all ${error ? 'border-rose-200' : 'border-slate-100'}`}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -117,19 +140,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
               <>
                 <div className="space-y-4">
                   <div className="p-3 bg-blue-50/50 rounded-xl text-[11px] text-blue-600 leading-relaxed border border-blue-100">
-                    Verify your identity by providing your registered details.
+                    Verify identity with registered email and phone number.
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-500 ml-1">Email</label>
+                    <label className="text-xs font-medium text-slate-500 ml-1">Registered Email</label>
                     <input required type="email" className="block w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none text-sm" value={recoveryEmail} onChange={e => setRecoveryEmail(e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-slate-500 ml-1">Phone Number</label>
+                    <label className="text-xs font-medium text-slate-500 ml-1">Registered Phone Number</label>
                     <input required type="text" className="block w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none text-sm" placeholder="+1..." value={recoveryPhone} onChange={e => setRecoveryPhone(e.target.value)} />
                   </div>
                   <div className="pt-2 border-t border-slate-50 space-y-3">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-slate-500 ml-1">New Password</label>
+                      <label className="text-xs font-medium text-slate-500 ml-1">New Password (Min 8 chars)</label>
                       <input required type="password" className="block w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none text-sm" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
                     </div>
                     <div className="space-y-1.5">
@@ -171,6 +194,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onResetPassword }) => {
               ].map(demo => (
                 <button 
                   key={demo.email}
+                  type="button"
                   onClick={() => { setEmail(demo.email); setPassword('password123'); }}
                   className="w-full py-2 px-4 text-[11px] font-medium bg-slate-50 text-slate-500 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all text-left flex justify-between items-center"
                 >

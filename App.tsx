@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, AuthState, AttendanceClass, AttendanceRecord, PaymentRecord } from './types.ts';
-import { MOCK_USERS, APP_STORAGE_KEY, CREDIT_PACKAGES as INITIAL_PACKAGES } from './constants.ts';
+import { MOCK_USERS, APP_STORAGE_KEY, MOCK_PACKAGES } from './constants.ts';
 import Auth from './components/Auth.tsx';
 import AdminView from './components/AdminView.tsx';
 import TrainerView from './components/TrainerView.tsx';
@@ -39,7 +40,7 @@ const App: React.FC = () => {
 
   const [packages, setPackages] = useState(() => {
     const saved = localStorage.getItem(`${APP_STORAGE_KEY}_packages`);
-    return saved ? JSON.parse(saved) : INITIAL_PACKAGES;
+    return saved ? JSON.parse(saved) : MOCK_PACKAGES;
   });
 
   useEffect(() => {
@@ -54,167 +55,146 @@ const App: React.FC = () => {
     localStorage.setItem(`${APP_STORAGE_KEY}_packages`, JSON.stringify(packages));
   }, [classes, attendance, payments, users, packages]);
 
-  const handleLogin = (email: string, password?: string) => {
+  const handleLogin = (email: string, password?: string): boolean => {
     const foundUser = users.find(u => u.email.trim().toLowerCase() === email.trim().toLowerCase());
     if (foundUser && foundUser.password === password) {
       setAuth({ user: foundUser, isAuthenticated: true });
-    } else {
-      alert("Invalid credentials. Please check your email and password.");
-    }
-  };
-
-  const handleLogout = () => setAuth({ user: null, isAuthenticated: false });
-
-  const handleResetPassword = (email: string, phone: string, newPassword: string) => {
-    const idx = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase() && u.phoneNumber === phone);
-    if (idx !== -1) {
-      const updated = [...users];
-      updated[idx] = { ...updated[idx], password: newPassword };
-      setUsers(updated);
       return true;
     }
     return false;
   };
 
-  const addClass = (newClass: AttendanceClass) => setClasses(prev => [newClass, ...prev]);
+  const handleLogout = () => setAuth({ user: null, isAuthenticated: false });
+
+  const addClass = (newClass: AttendanceClass): boolean => {
+    const isDuplicate = classes.some(c => 
+      c.name.trim().toLowerCase() === newClass.name.trim().toLowerCase() && 
+      c.date === newClass.date && 
+      c.time === newClass.time
+    );
+    if (isDuplicate) {
+      return false;
+    }
+    setClasses(prev => [newClass, ...prev]);
+    return true;
+  };
+
   const updateClass = (updated: AttendanceClass) => setClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
+  
   const deleteClass = (id: string) => {
     setClasses(prev => prev.filter(c => c.id !== id));
     setAttendance(prev => prev.filter(a => a.classId !== id));
   };
 
-  const addUser = (newUser: User) => {
-    const preparedUser = {
-      ...newUser,
-      credits: newUser.role === UserRole.TRAINEE ? (newUser.credits ?? 0) : undefined
-    };
-    setUsers(prev => [...prev, preparedUser]);
-  };
-
   const updateUser = (updated: User) => {
     setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
     if (auth.user?.id === updated.id) {
-      setAuth({ user: updated, isAuthenticated: true });
+      setAuth(prev => ({ ...prev, user: updated }));
     }
   };
 
-  const handleBooking = (record: AttendanceRecord) => {
-    const trainee = users.find(u => u.id === record.traineeId);
-    if (!trainee || trainee.role !== UserRole.TRAINEE) {
-      return { success: false, message: "Trainee account error." };
-    }
-    
-    const userCredits = trainee.credits ?? 0;
-    if (userCredits < 1) {
-      return { success: false, message: "Insufficient credits. Please purchase more." };
-    }
-    
-    const updatedTrainee = { ...trainee, credits: userCredits - 1 };
-    updateUser(updatedTrainee);
-    setAttendance(prev => [record, ...prev]);
-    return { success: true, message: "Booking confirmed!" };
-  };
-
-  const handleToggleManualAttendance = (classId: string, traineeId: string) => {
-    const existingIndex = attendance.findIndex(a => a.classId === classId && a.traineeId === traineeId);
+  const toggleAttendance = (classId: string, traineeId: string) => {
     const trainee = users.find(u => u.id === traineeId);
+    if (!trainee) return { success: false, message: "User not found" };
+
+    const recordIndex = attendance.findIndex(a => a.classId === classId && a.traineeId === traineeId);
     
-    if (existingIndex !== -1) {
-      setAttendance(prev => prev.filter((_, i) => i !== existingIndex));
-      if (trainee) {
+    if (recordIndex !== -1) {
+      // Unregister
+      setAttendance(prev => prev.filter((_, i) => i !== recordIndex));
+      
+      // Always refund if the target is a trainee
+      if (trainee.role === UserRole.TRAINEE) {
         updateUser({ ...trainee, credits: (trainee.credits || 0) + 1 });
       }
-      return { success: true, message: "Attendance removed. Credit refunded." };
+      return { success: true, message: "Removed successfully." };
     } else {
-      if (!trainee || trainee.role !== UserRole.TRAINEE) return { success: false, message: "Invalid user." };
-      const credits = trainee.credits ?? 0;
-      if (credits < 1) return { success: false, message: "Trainee has no credits remaining." };
+      // Register
+      // Every trainee must have at least 1 credit to be marked present, 
+      // even if a staff member is doing it.
+      if (trainee.role === UserRole.TRAINEE && (trainee.credits || 0) < 1) {
+        return { success: false, message: "Insufficient credits. Trainee must top up." };
+      }
       
-      updateUser({ ...trainee, credits: credits - 1 });
+      const isStaff = auth.user?.role === UserRole.ADMIN || auth.user?.role === UserRole.TRAINER;
+      
       setAttendance(prev => [{
         id: Math.random().toString(36).substr(2, 9),
-        classId,
-        traineeId,
-        timestamp: Date.now(),
-        method: 'MANUAL',
-        status: 'ATTENDED'
+        classId, 
+        traineeId, 
+        timestamp: Date.now(), 
+        method: isStaff ? 'MANUAL' : 'APP', 
+        status: 'BOOKED'
       }, ...prev]);
-      return { success: true, message: "Attendance marked manually." };
+      
+      // Deduct credit for every new trainee check-in
+      if (trainee.role === UserRole.TRAINEE) {
+        updateUser({ ...trainee, credits: (trainee.credits || 0) - 1 });
+      }
+      return { success: true, message: "Registered successfully." };
     }
   };
 
-  const handleCancelBooking = (classId: string, traineeId: string) => {
-    const cls = classes.find(c => c.id === classId);
-    if (!cls) return { success: false, message: "Critical Error: Class session missing." };
+  const handlePurchase = (payment: PaymentRecord) => {
+    const trainee = users.find(u => u.id === payment.traineeId);
+    if (!trainee) return;
+    setPayments(prev => [payment, ...prev]);
+    updateUser({ ...trainee, credits: (trainee.credits || 0) + payment.credits });
+  };
 
-    const [year, month, day] = cls.date.split('-').map(Number);
-    const [hours, minutes] = cls.time.split(':').map(Number);
-    const classTime = new Date(year, month - 1, day, hours, minutes);
-    
-    const now = new Date();
-    const diffInMinutes = (classTime.getTime() - now.getTime()) / (1000 * 60);
-
-    if (diffInMinutes < 30) {
-      const msg = diffInMinutes <= 0 
-        ? "Cancellation Failed: This session has already started or finished." 
-        : `Cancellation Failed: This class starts in ${Math.floor(diffInMinutes)} minutes. 30m notice required.`;
-      return { success: false, message: msg };
+  const handleResetPassword = (email: string, phone: string, newPass: string) => {
+    const found = users.find(u => u.email.trim().toLowerCase() === email.trim().toLowerCase() && u.phoneNumber?.trim() === phone.trim());
+    if (found) {
+      updateUser({ ...found, password: newPass });
+      return true;
     }
-
-    setAttendance(prev => {
-      const exists = prev.some(a => a.classId === classId && a.traineeId === traineeId);
-      if (!exists) return prev;
-      return prev.filter(a => !(a.classId === classId && a.traineeId === traineeId));
-    });
-
-    const trainee = users.find(u => u.id === traineeId);
-    if (trainee) {
-      const currentCredits = trainee.credits ?? 0;
-      updateUser({ ...trainee, credits: currentCredits + 1 });
-    }
-
-    return { success: true, message: "Success: Booking cancelled and credit refunded." };
+    return false;
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto bg-white shadow-xl relative overflow-hidden">
+    <div className="min-h-screen flex flex-col max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden border-x border-slate-100">
       {auth.isAuthenticated && auth.user ? (
         <>
-          <header className="px-5 py-6 bg-indigo-600 text-white flex justify-between items-center shrink-0">
+          <header className="px-5 py-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex justify-between items-center shrink-0 z-50 shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center transition-transform hover:rotate-6"><UserIcon size={20} /></div>
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/30 shadow-inner">
+                <UserIcon size={20} className="text-white" />
+              </div>
               <div>
-                <h1 className="font-semibold text-lg leading-none tracking-tight">AttendEase</h1>
-                <p className="text-[10px] text-indigo-100 uppercase font-medium tracking-wider mt-1">{auth.user.role}</p>
+                <h1 className="font-bold text-lg leading-none tracking-tight">AttendEase</h1>
+                <p className="text-[10px] text-blue-100 uppercase font-bold tracking-widest mt-1 opacity-80">{auth.user.role}</p>
               </div>
             </div>
-            <button onClick={handleLogout} className="p-2.5 hover:bg-white/10 rounded-full transition-all active:scale-90"><LogOut size={20} /></button>
+            <button onClick={handleLogout} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all active:scale-95 border border-white/10">
+              <LogOut size={20} />
+            </button>
           </header>
 
-          <main className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar bg-slate-50">
+          <main className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar bg-slate-50 relative">
             {auth.user.role === UserRole.ADMIN && (
               <AdminView 
-                user={auth.user} classes={classes} attendance={attendance} payments={payments} users={users} packages={packages}
-                onAddUser={addUser} onUpdateUser={updateUser} onAddClass={addClass} onUpdateClass={updateClass} onDeleteClass={deleteClass}
-                onAddAttendance={handleBooking} onToggleAttendance={handleToggleManualAttendance} setPackages={setPackages}
+                user={auth.user} classes={classes} attendance={attendance} 
+                users={users} payments={payments} packages={packages}
+                onAddUser={u => setUsers(prev => [...prev, u])} onUpdateUser={updateUser} 
+                onAddClass={addClass} onUpdateClass={updateClass} onDeleteClass={deleteClass}
+                onToggleAttendance={(c, t) => toggleAttendance(c, t)}
+                setPackages={setPackages}
               />
             )}
             {auth.user.role === UserRole.TRAINER && (
               <TrainerView 
                 user={auth.user} classes={classes} attendance={attendance} trainees={users.filter(u => u.role === UserRole.TRAINEE)}
-                onAddClass={addClass} onUpdateClass={updateClass} onDeleteClass={deleteClass} onAddAttendance={handleBooking} onToggleAttendance={handleToggleManualAttendance} onUpdateUser={updateUser}
+                onAddClass={addClass} onUpdateClass={updateClass} onDeleteClass={deleteClass} 
+                onToggleAttendance={(c, t) => toggleAttendance(c, t)} onUpdateUser={updateUser}
               />
             )}
             {auth.user.role === UserRole.TRAINEE && (
               <TraineeView 
-                user={auth.user} classes={classes} attendance={attendance} payments={payments} packages={packages}
-                onRegister={handleBooking} onCancel={handleCancelBooking} onPurchase={p => {
-                  setPayments(prev => [...prev, p]);
-                  const trainee = users.find(u => u.id === p.traineeId);
-                  if (trainee) {
-                    updateUser({ ...trainee, credits: (trainee.credits || 0) + p.credits });
-                  }
-                }} onUpdateUser={updateUser}
+                user={auth.user} classes={classes} attendance={attendance} 
+                payments={payments} packages={packages}
+                onRegister={(rec) => toggleAttendance(rec.classId, rec.traineeId)}
+                onCancel={(c, t) => toggleAttendance(c, t)}
+                onPurchase={handlePurchase} onUpdateUser={updateUser}
               />
             )}
           </main>
