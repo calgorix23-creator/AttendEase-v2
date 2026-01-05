@@ -5,7 +5,7 @@ import Auth from './components/Auth.tsx';
 import AdminView from './components/AdminView.tsx';
 import TrainerView from './components/TrainerView.tsx';
 import TraineeView from './components/TraineeView.tsx';
-import { LogOut, User as UserIcon, Loader2, AlertTriangle, RefreshCw, Cloud, Database } from 'lucide-react';
+import { LogOut, User as UserIcon, Loader2 } from 'lucide-react';
 import { MOCK_USERS, APP_STORAGE_KEY } from './constants.ts';
 
 interface AppDB {
@@ -18,8 +18,6 @@ interface AppDB {
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [storageMode, setStorageMode] = useState<'cloud' | 'local'>('cloud');
   const skipSync = useRef(true);
   const syncTimer = useRef<number | null>(null);
   
@@ -40,84 +38,39 @@ const App: React.FC = () => {
     packages: []
   });
 
-  const fetchData = async () => {
+  const fetchData = () => {
     setLoading(true);
-    setError(null);
-    try {
-      // Small timeout to allow the Node.js process to warm up on Hostinger
-      const response = await fetch('/api/data');
-      
-      if (response.status === 404) {
-        console.warn("Backend API not detected. Using Local Storage.");
-        setStorageMode('local');
-        const localData = localStorage.getItem(APP_STORAGE_KEY);
-        if (localData) {
-          setDb(JSON.parse(localData));
-        } else {
-          setDb({ users: MOCK_USERS, classes: [], attendance: [], payments: [], packages: [] });
-        }
-        setLoading(false);
-        setTimeout(() => { skipSync.current = false; }, 500);
-        return;
+    const localData = localStorage.getItem(APP_STORAGE_KEY);
+    if (localData) {
+      try {
+        setDb(JSON.parse(localData));
+      } catch {
+        setDb({ users: MOCK_USERS, classes: [], attendance: [], payments: [], packages: [] });
       }
-
-      if (!response.ok) {
-        throw new Error(`Cloud Error: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      setStorageMode('cloud');
-      
-      if (!data.users || data.users.length === 0) {
-        const initial: AppDB = { 
-          users: MOCK_USERS,
-          classes: data.classes || [],
-          attendance: data.attendance || [],
-          payments: data.payments || [],
-          packages: data.packages || []
-        };
-        setDb(initial);
-        await syncWithServer(initial);
-      } else {
-        setDb(data);
-      }
-    } catch (error: any) {
-      console.error("Data fetch error:", error);
-      setError(error.message || "Unable to reach the backend server.");
-    } finally {
-      setLoading(false);
-      setTimeout(() => { skipSync.current = false; }, 500);
+    } else {
+      setDb({ users: MOCK_USERS, classes: [], attendance: [], payments: [], packages: [] });
     }
+    setLoading(false);
+    setTimeout(() => { skipSync.current = false; }, 500);
   };
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const syncWithServer = async (currentState: AppDB) => {
+  const syncWithLocalStorage = (currentState: AppDB) => {
     localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(currentState));
-    if (storageMode === 'local') return;
-
-    try {
-      await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentState),
-      });
-    } catch (error) {
-      console.error("Cloud sync failed:", error);
-    }
   };
 
   useEffect(() => {
     if (!loading && !skipSync.current) {
       if (syncTimer.current) window.clearTimeout(syncTimer.current);
       syncTimer.current = window.setTimeout(() => {
-        syncWithServer(db);
-      }, 1500); // Slightly longer debounce for cloud stability
+        syncWithLocalStorage(db);
+      }, 500);
     }
     return () => { if (syncTimer.current) window.clearTimeout(syncTimer.current); };
-  }, [db, loading, storageMode]);
+  }, [db, loading]);
 
   useEffect(() => {
     localStorage.setItem('attendease_auth', JSON.stringify(auth));
@@ -241,38 +194,8 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Connecting to Cloud...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <div className="bg-white p-8 rounded-[32px] shadow-xl border border-rose-100 max-w-sm w-full text-center space-y-6">
-          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto">
-            <AlertTriangle size={32} />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-bold text-slate-800 tracking-tight">Cloud Unreachable</h3>
-            <p className="text-xs text-slate-500 leading-relaxed font-medium">{error}</p>
-          </div>
-          <div className="space-y-3">
-            <button 
-              onClick={fetchData} 
-              className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest"
-            >
-              <RefreshCw size={16} /> Retry Cloud
-            </button>
-            <button 
-              onClick={() => { setStorageMode('local'); setError(null); fetchData(); }} 
-              className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-xs uppercase tracking-widest"
-            >
-              <Database size={16} /> Run Locally
-            </button>
-          </div>
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto" />
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading AttendEase...</p>
         </div>
       </div>
     );
@@ -284,23 +207,11 @@ const App: React.FC = () => {
         <>
           <header className="px-5 py-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex justify-between items-center shrink-0 z-50 shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/30 shadow-inner relative">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/30 shadow-inner">
                 <UserIcon size={20} className="text-white" />
-                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-slate-100">
-                  {storageMode === 'cloud' ? (
-                    <Cloud size={8} className="text-blue-600" />
-                  ) : (
-                    <Database size={8} className="text-amber-500" />
-                  )}
-                </div>
               </div>
               <div>
-                <h1 className="font-bold text-lg leading-none tracking-tight flex items-center gap-2">
-                  AttendEase
-                  <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase tracking-tighter ${storageMode === 'cloud' ? 'bg-blue-400/20 text-blue-100' : 'bg-amber-400/20 text-amber-100'}`}>
-                    {storageMode}
-                  </span>
-                </h1>
+                <h1 className="font-bold text-lg leading-none tracking-tight">AttendEase</h1>
                 <p className="text-[10px] text-blue-100 uppercase font-bold tracking-widest mt-1 opacity-80">{auth.user.role}</p>
               </div>
             </div>
